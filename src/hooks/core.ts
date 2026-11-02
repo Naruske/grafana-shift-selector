@@ -372,8 +372,8 @@ ORDER by ??, ??
       }
 
       const query = {
-        from: (new Date(isSwapDates ? to : from)).toISOString(),
-        to: (new Date(isSwapDates ? from : to)).toISOString(),
+        from: isSwapDates ? to : from,
+        to: isSwapDates ? from : to,
         [vars.queryShiftsGroup]: autoSelectShiftGroup,
         [vars.queryShiftsOptions]: uuid,
         refresh: _refresh,

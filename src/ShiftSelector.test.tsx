@@ -166,8 +166,8 @@ describe('ShiftSelector Panel (Grafana 13 & React 19)', () => {
     await waitFor(() => {
       expect(partialSpy).toHaveBeenCalledWith(
         expect.objectContaining({
-          from: '2025-05-15T06:00:00.000Z',
-          to: '2025-05-15T14:00:00.000Z',
+          from: Date.UTC(2025, 4, 15, 6, 0, 0),
+          to: Date.UTC(2025, 4, 15, 14, 0, 0),
           [vars.queryShiftsOptions]: 'shift_uuid_1',
         }),
         false
@@ -193,8 +193,8 @@ describe('ShiftSelector Panel (Grafana 13 & React 19)', () => {
     await waitFor(() => {
       expect(partialSpy).toHaveBeenCalledWith(
         expect.objectContaining({
-          from: '2025-05-15T06:00:00.000Z',
-          to: '2025-05-15T22:00:00.000Z',
+          from: Date.UTC(2025, 4, 15, 6, 0, 0),
+          to: existingEndMs,
           [vars.queryShiftsOptions]: undefined,
         }),
         false

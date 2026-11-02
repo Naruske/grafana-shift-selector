@@ -48,6 +48,7 @@ describe('Grafana 13 Contract & Generalization Eval Suite', () => {
       if (fs.existsSync(bundlePath)) {
         const bundleContent = fs.readFileSync(bundlePath, 'utf8');
         expect(bundleContent).not.toContain('findDOMNode');
+        expect(bundleContent).not.toContain('toISOString()');
         expect(bundleContent).toContain('"@grafana/data"');
         expect(bundleContent).toContain('"@grafana/runtime"');
         expect(bundleContent).toContain('"react"');
