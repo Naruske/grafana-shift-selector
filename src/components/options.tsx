@@ -27,8 +27,6 @@ import {
   shiftSelectHandler as utilShiftSelectHandler,
 } from '../utils';
 
-const isDark = config.theme.isDark;
-
 export const ShiftOptions = ({
   options,
   setShiftParams,
@@ -58,6 +56,7 @@ export const ShiftOptions = ({
   productionDate: number;
   isOptionGroupLabelTrimmed: boolean;
 }) => {
+  const isDark = config.theme2?.isDark ?? config.theme?.isDark ?? true;
   const shifts = getShifts(options, optionsData, productionDate, isOptionGroupLabelTrimmed);
 
   if (!viewType) {

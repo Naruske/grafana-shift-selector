@@ -22,7 +22,7 @@ const config = async (env): Promise<Configuration> => ({
   cache: {
     type: 'filesystem',
     buildDependencies: {
-      config: [__filename],
+      config: [path.resolve(process.cwd(), '.config', 'webpack', 'webpack.config.ts')],
     },
   },
 
@@ -44,6 +44,8 @@ const config = async (env): Promise<Configuration> => ({
     'slate-plain-serializer',
     '@grafana/slate-react',
     'react',
+    'react/jsx-runtime',
+    'react/jsx-dev-runtime',
     'react-dom',
     'react-redux',
     'redux',

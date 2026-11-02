@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.7
+- Grafana version upgrade (13.3.0)
+- Updated `@grafana/data`, `@grafana/runtime`, `@grafana/ui`, `@grafana/schema`, `@grafana/i18n`, and `@grafana/e2e-selectors` to `^13.3.0`
+- Upgraded `react` and `react-dom` to `^19.0.0` and `react-datepicker` to `^8.10.0` for React 19 compatibility
+- Removed deprecated `Vector` usage in favor of Grafana 13 array-backed `Field.values`
+- Added UID-based datasource resolution fallback in `useShiftSelectorHook` for Grafana 13
+
 ## 0.1.6
 - Release workfile updated for updated Grafana signing flow
 - Fixes for [issue #28](https://github.com/isaozler/grafana-shift-selector/issues/33)

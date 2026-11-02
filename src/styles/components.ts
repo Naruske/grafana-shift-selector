@@ -1,8 +1,21 @@
 import { config } from '@grafana/runtime';
 import { styled } from '@stitches/react';
 
-const palette: any = config.theme.palette;
-const colors: any = config.theme.colors;
+const palette: any = config.theme?.palette ?? {
+  gray1: config.theme2?.colors?.background?.secondary ?? '#1f1f20',
+  gray10: config.theme2?.colors?.text?.primary ?? '#111217',
+  white: '#ffffff',
+  orange: '#ff780a',
+  brandDanger: config.theme2?.colors?.error?.main ?? '#e02f44',
+  brandWarning: config.theme2?.colors?.warning?.main ?? '#ff9900',
+  brandPrimary: config.theme2?.colors?.primary?.main ?? '#3d71d9',
+  brandSuccess: config.theme2?.colors?.success?.main ?? '#299c46',
+};
+const colors: any = config.theme?.colors ?? {
+  border2: config.theme2?.colors?.border?.medium ?? '#2c3235',
+  formInputBorder: config.theme2?.colors?.border?.medium ?? '#2c3235',
+  formInputBorderHover: config.theme2?.colors?.border?.strong ?? '#464c54',
+};
 
 const monoSpaceFont = {
   fontFamily: '"Kode Mono", monospace',

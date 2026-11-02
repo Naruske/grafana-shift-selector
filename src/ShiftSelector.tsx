@@ -14,9 +14,8 @@ import { useShiftSelectorHook } from './hooks/core';
 import { locationService } from '@grafana/runtime';
 import { ProgressBar } from './components/progressBar';
 
-let refreshT: number | null = null;
-
 const ShiftSelector: React.FC<PanelProps<TPropOptions>> = (props) => {
+  const refreshTRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [renderCount, setRenderCount] = useState(0);
   const [isBlockedRender, setIsBlockedRender] = useState(false);
   const [shiftSelectorPluginPanel, setShiftSelectorPluginPanel] = useState<NodeListOf<HTMLDivElement> | null>(null);
@@ -114,22 +113,22 @@ const ShiftSelector: React.FC<PanelProps<TPropOptions>> = (props) => {
   }, [props.options.autoSelectShiftGroup, autoSelectShiftGroup]);
 
   useEffect(() => {
-    if (refreshT) {
-      clearInterval(refreshT);
-      refreshT = null;
+    if (refreshTRef.current) {
+      clearInterval(refreshTRef.current);
+      refreshTRef.current = null;
     }
 
     if (props.options._refreshInterval) {
-      refreshT = setInterval(() => {
+      refreshTRef.current = setInterval(() => {
         props.eventBus.publish({ type: 'refresh', payload: undefined, origin: undefined });
         setRenderCount((d) => d + 1);
-      }, props.options._refreshInterval as unknown as number) as unknown as number;
+      }, props.options._refreshInterval as unknown as number);
     }
 
     return () => {
-      if (refreshT) {
-        clearInterval(refreshT);
-        refreshT = null;
+      if (refreshTRef.current) {
+        clearInterval(refreshTRef.current);
+        refreshTRef.current = null;
       }
     };
   }, [props.eventBus, props.options._refreshInterval]);

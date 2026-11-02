@@ -6,6 +6,30 @@
  */
 
 import '@testing-library/jest-dom';
+import { TextEncoder, TextDecoder } from 'util';
+
+// React 19's scheduler relies on MessageChannel, which jsdom does not implement.
+// Using setTimeout avoids holding open a worker_threads.MessagePort libuv handle after tests complete.
+class MockMessageChannel {
+  constructor() {
+    this.port1 = { onmessage: null };
+    this.port2 = {
+      postMessage: (data) => {
+        setTimeout(() => {
+          if (this.port1.onmessage) {
+            this.port1.onmessage({ data });
+          }
+        }, 0);
+      },
+    };
+  }
+}
+
+Object.assign(global, {
+  TextDecoder,
+  TextEncoder,
+  MessageChannel: global.MessageChannel || MockMessageChannel,
+});
 
 // https://jestjs.io/docs/manual-mocks#mocking-methods-which-are-not-implemented-in-jsdom
 Object.defineProperty(global, 'matchMedia', {

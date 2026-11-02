@@ -1,8 +1,8 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 
 import sqlstring from 'sqlstring';
 
-import { DataFrame, LoadingState, Vector, TimeRange, PanelProps } from '@grafana/data';
+import { DataFrame, LoadingState, TimeRange, PanelProps } from '@grafana/data';
 import {
   getBackendSrv,
   getDataSourceSrv,
@@ -31,10 +31,9 @@ import { firstValueFrom } from 'rxjs';
 
 type TDataResponse = { data: { results: { shifts_values: { dataframes: DataFrame[] } } } }
 
-let isInitiated = false;
-let refresh: null | string = null
-
 export const useShiftSelectorHook = (props: PanelProps<TPropOptions>) => {
+  const isInitiatedRef = useRef<boolean>(false);
+  const refreshRef = useRef<null | string>(null);
   const { data: _data, width, height, timeRange, eventBus } = props;
   const {
     isAutoSelectShift,
@@ -64,15 +63,16 @@ export const useShiftSelectorHook = (props: PanelProps<TPropOptions>) => {
   const [sqlConfig, setSqlConfig] = useState<TSqlConfig | null>(null);
   const [autoSelectShiftGroup, setAutoSelectShiftGroup] = useState<string>(locationService.getSearch().get(vars.queryShiftsGroup) ?? props.options.autoSelectShiftGroup);
 
-  const processShifts = useCallback(({ rowsCount, responseFields }: { rowsCount: number; responseFields: [] }) => {
+  const processShifts = useCallback(({ rowsCount, responseFields }: { rowsCount: number; responseFields: any[] }) => {
     return Array.from({ length: rowsCount })
       .reduce((res: any[], _row: any, rowIndex: number) => {
         return [
           ...res,
           responseFields.reduce((resFields: {}, field: any) => {
+            const fieldValues = Array.isArray(field.values) ? field.values : field.values?.toArray?.() || [];
             return {
               ...resFields,
-              [field.name]: field.values.toArray()[rowIndex],
+              [field.name]: fieldValues[rowIndex],
             };
           }, {}),
         ];
@@ -105,28 +105,32 @@ export const useShiftSelectorHook = (props: PanelProps<TPropOptions>) => {
   }, []);
   const setAlertHandler = useCallback(
     (alert: TAlert) => {
-      const isDuplicate = !!alerts.find(({ id, text }) => id === alert.id && text === alert.text);
+      return setAlerts((prevAlerts: TAlert[]) => {
+        const isDuplicate = !!prevAlerts.find(({ id, text }) => id === alert.id && text === alert.text);
 
-      if (isDuplicate) {
-        return;
-      }
+        if (isDuplicate) {
+          return prevAlerts;
+        }
 
-      const allAlerts = alerts.filter(({ id }: { id: number }) => alert.id !== id);
-      return setAlerts(() => [...allAlerts, alert]);
+        const allAlerts = prevAlerts.filter(({ id }: { id: number }) => alert.id !== id);
+        return [...allAlerts, alert];
+      });
     },
-    [setAlerts, alerts]
+    [setAlerts]
   );
   const resetAlert = useCallback(
     (id: number) => {
-      const isExisting = !!alerts.find((alert) => id === alert.id);
+      return setAlerts((prevAlerts: TAlert[]) => {
+        const isExisting = !!prevAlerts.find((alert) => id === alert.id);
 
-      if (!isExisting) {
-        return;
-      }
+        if (!isExisting) {
+          return prevAlerts;
+        }
 
-      return setAlerts((alerts: TAlert[]) => [...alerts.filter(({ id: _id }: { id: number }) => _id !== id)]);
+        return prevAlerts.filter(({ id: _id }: { id: number }) => _id !== id);
+      });
     },
-    [alerts]
+    [setAlerts]
   );
 
   const getRefreshRate = useCallback(() => {
@@ -179,11 +183,13 @@ export const useShiftSelectorHook = (props: PanelProps<TPropOptions>) => {
 
       if (updateType === 'from') {
         const searchTo = locationService.getSearch().get('to');
-        updateTimeRange.to = searchTo ? +searchTo : updateTimeRange.to;
+        const parsedTo = searchTo ? (Number.isNaN(+searchTo) ? Date.parse(searchTo) : +searchTo) : NaN;
+        updateTimeRange.to = !Number.isNaN(parsedTo) ? parsedTo : updateTimeRange.to;
         params = {};
       } else if (updateType === 'to') {
         const searchFrom = locationService.getSearch().get('from');
-        updateTimeRange.from = searchFrom ? +searchFrom : updateTimeRange.from;
+        const parsedFrom = searchFrom ? (Number.isNaN(+searchFrom) ? Date.parse(searchFrom) : +searchFrom) : NaN;
+        updateTimeRange.from = !Number.isNaN(parsedFrom) ? parsedFrom : updateTimeRange.from;
         params = {};
       }
 
@@ -213,6 +219,7 @@ export const useShiftSelectorHook = (props: PanelProps<TPropOptions>) => {
 
         if (staticShiftsValues.length) {
           setShiftValues(() => staticShiftsValues);
+          resetAlert(3);
           return resetAlert(4);
         }
       }
@@ -223,21 +230,21 @@ export const useShiftSelectorHook = (props: PanelProps<TPropOptions>) => {
         (templateSrv.getVariables().find(({ name }: { name: string }) => name === vars.varDataModel) as IVariableModel) || null;
 
       if (!datasourceRef || !config) {
-        if (!alerts.find(({ id }) => id === 3)) {
-          return setAlertHandler({
-            id: 3,
-            type: 'brandDanger',
-            text: `Error! Missing data source settings please check if your ${vars.varDataModel} and ${vars.queryShiftsOptions} variables are set correctly!`,
-          });
-        }
-
-        return;
+        return setAlertHandler({
+          id: 3,
+          type: 'brandDanger',
+          text: `Error! Missing data source settings please check if your ${vars.varDataModel} and ${vars.queryShiftsOptions} variables are set correctly!`,
+        });
       }
 
-      const { id: datasourceId } =
-        dataSources.find(({ name, uid }: { name: string, uid: string }) => name === datasourceRef.current.value || uid === datasourceRef.current.value) || {};
+      const matchedDatasource =
+        dataSources.find(
+          ({ name, uid }: { name: string; uid: string }) =>
+            name === datasourceRef.current.value || uid === datasourceRef.current.value
+        ) || {};
+      const { id: datasourceId, uid: datasourceUid, type: datasourceType } = matchedDatasource;
 
-      if (!datasourceId) {
+      if (!datasourceId && !datasourceUid) {
         return setAlertHandler({
           id: 3,
           type: 'brandDanger',
@@ -259,12 +266,21 @@ export const useShiftSelectorHook = (props: PanelProps<TPropOptions>) => {
         });
       }
 
-      const sSchema = config.schema.shift_groups ? `${config.schema.shift_groups}.` : '';
+      resetAlert(3);
+      const sSchema = config.schema.shifts ? `${config.schema.shifts}.` : '';
       const sgSchema = config.schema.shift_groups ? `${config.schema.shift_groups}.` : '';
       const refId = vars.varShiftsValuesName;
       const query = {
         refId,
-        datasourceId,
+        ...(datasourceId !== undefined ? { datasourceId } : {}),
+        ...(datasourceUid
+          ? {
+              datasource: {
+                uid: datasourceUid,
+                ...(datasourceType ? { type: datasourceType } : {}),
+              },
+            }
+          : {}),
         rawSql: sqlstring.format(
           `SELECT ??, ?? AS group_uuid, ??, ??, ??, ??
 FROM ?? s
@@ -304,10 +320,11 @@ ORDER by ??, ??
       const { data: queries, state } = toDataQueryResponse(response as FetchResponse);
 
       if (state === LoadingState.Done) {
-        const { fields: responseFields } =
+        const { fields: responseFields = [] } =
           queries.find((instance: any) => instance.refId === vars.varShiftsValuesName) || {};
-        const [field]: [{ name: string; values: Vector }] = responseFields;
-        const rowsCount = field?.values?.toArray().length || 0;
+        const [field]: Array<{ name: string; values: any[] | { toArray?: () => any[] } }> = responseFields;
+        const fieldValues = Array.isArray(field?.values) ? field.values : field?.values?.toArray?.() || [];
+        const rowsCount = fieldValues.length || 0;
 
         if (rowsCount) {
           const shifts = processShifts({ rowsCount, responseFields });
@@ -330,9 +347,8 @@ ORDER by ??, ??
         type: 'brandDanger',
         text: `Service error: ${error?.message || error?.statusText}`,
       });
-      throw error;
     }
-  }, [siteUUID, sqlConfig, isStatic, resetAlert, setAlertHandler, setShiftValues, processShifts, templateSrv, alerts]);
+  }, [siteUUID, sqlConfig, isStatic, resetAlert, setAlertHandler, setShiftValues, processShifts, templateSrv]);
 
   useEffect(() => {
     const dateRange = {
@@ -342,17 +358,17 @@ ORDER by ??, ??
 
     setInitDateRange(() => dateRange);
 
-    if (customTimeRange) {
+    if (customTimeRange?.from && customTimeRange?.to) {
       const { from, to, uuid } = customTimeRange || {};
       const fromCheck = typeof from === 'string' ? timeRange.from.unix() * 1000 : from;
       const toCheck = typeof to === 'string' ? timeRange.to.unix() * 1000 : to;
       const isSwapDates = fromCheck > toCheck;
       let { refresh: _refresh } = getRefreshRate()
 
-      if (refresh && !_refresh) {
-        _refresh = refresh
-      } else if (!refresh && _refresh) {
-        refresh = _refresh
+      if (refreshRef.current && !_refresh) {
+        _refresh = refreshRef.current
+      } else if (!refreshRef.current && _refresh) {
+        refreshRef.current = _refresh
       }
 
       const query = {
@@ -426,10 +442,10 @@ ORDER by ??, ??
   useEffect(() => {
     if ((sqlConfig && siteUUID) || isStatic) {
       getValues();
-    } else if (sqlConfig && !siteUUID && !isStatic && !alerts.find(({ id }) => id === 3)) {
+    } else if (sqlConfig && !siteUUID && !isStatic) {
       getValues(sqlConfig);
     }
-  }, [siteUUID, sqlConfig, getValues, isStatic, alerts]);
+  }, [siteUUID, sqlConfig, getValues, isStatic]);
 
   useEffect(() => {
     if (isStatic && sqlConfig?.static?.shifts) {
@@ -453,8 +469,8 @@ ORDER by ??, ??
       setAutoSelectShiftGroup(initGroup)
     }
 
-    if (!isInitiated && isRealtimeActive && autoSelectShiftGroup && shiftOptions?.options?.length && shiftValues?.length && productionDate) {
-      isInitiated = true;
+    if (!isInitiatedRef.current && isRealtimeActive && autoSelectShiftGroup && shiftOptions?.options?.length && shiftValues?.length && productionDate) {
+      isInitiatedRef.current = true;
 
       updateActiveShift({
         setShiftParams,
@@ -522,11 +538,11 @@ ORDER by ??, ??
 
     try {
       const data = JSON.parse(rawSqlData);
+      resetAlert(3);
 
       setIsStatic(!!data.static?.shifts);
 
       if (data?.values?.site_uuid) {
-        resetAlert(3);
         setSiteUUID(() => data.values.site_uuid);
       }
 
@@ -555,10 +571,9 @@ ORDER by ??, ??
           });
         }
 
-        resetAlert(3);
-
         try {
           data = JSON.parse(rawSqlData);
+          resetAlert(3);
 
           setIsStatic(!!data.static?.shifts);
 

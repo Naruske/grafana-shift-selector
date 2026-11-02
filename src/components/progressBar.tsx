@@ -3,7 +3,10 @@ import React from 'react';
 import { config } from '@grafana/runtime';
 import { keyframes, styled } from '@stitches/react';
 
-const colors: any = config.theme.colors;
+const colors: any = config.theme?.colors ?? {
+  border1: config.theme2?.colors?.border?.weak ?? '#22252b',
+  border2: config.theme2?.colors?.border?.medium ?? '#2c3235',
+};
 
 const load = keyframes({
   '0%': { width: '0%' },

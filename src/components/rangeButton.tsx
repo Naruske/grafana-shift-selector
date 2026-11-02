@@ -3,8 +3,6 @@ import { TRangeButtonViewType } from '../types';
 import { RangeButtonComp } from '../styles/components';
 import { config } from '@grafana/runtime';
 
-const isDark = config.theme.isDark;
-
 export const RangeButton = ({
   title,
   label,
@@ -22,6 +20,8 @@ export const RangeButton = ({
   viewType: TRangeButtonViewType;
   buttonType: 'start-end' | 'start' | 'end';
 }) => {
+  const isDark = config.theme2?.isDark ?? config.theme?.isDark ?? true;
+
   return (
     <RangeButtonComp
       title={title}

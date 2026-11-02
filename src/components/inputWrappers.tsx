@@ -7,8 +7,6 @@ import { config } from '@grafana/runtime';
 import { TimeRange } from '@grafana/data';
 import { setTypeChangeHandler } from '../utils';
 
-const isDark = config.theme.isDark;
-
 type TPropInputWrapperOptions = Omit<
   TPropOptions,
   | 'isDataSourceShifts'
@@ -48,6 +46,7 @@ export const InputWrappers = (props: TPropInputWrapperOptions) => {
     isShowRangeButtons,
     isShowProductionDateSelector,
   } = props;
+  const isDark = config.theme2?.isDark ?? config.theme?.isDark ?? true;
   const dateFormat = 'yyyy-MM-dd';
   const btnStartEndIsActive = updateType === datePartsToSet.both;
   const btnStartIsActive = updateType === datePartsToSet.from;
@@ -64,7 +63,11 @@ export const InputWrappers = (props: TPropInputWrapperOptions) => {
         <DatePicker
           className="production-day-selector"
           selected={new Date(productionDate)}
-          onChange={(date: Date) => setProductionDate(+date)}
+          onChange={(date: Date | null) => {
+            if (date) {
+              setProductionDate(+date);
+            }
+          }}
           dateFormat={dateFormat}
         />
         {isShowRangeButtons ? (

@@ -1,4 +1,4 @@
-import { VariableModel } from '@grafana/data';
+import { dateTimeAsMoment, VariableModel } from '@grafana/data';
 
 export interface ShiftI {
   order?: number;
@@ -117,8 +117,8 @@ export type TStaticShift = {
 };
 
 export type TExtendedShift = ShiftI & {
-  startDate: moment.Moment;
-  endDate: moment.Moment;
+  startDate: ReturnType<typeof dateTimeAsMoment>;
+  endDate: ReturnType<typeof dateTimeAsMoment>;
   _: any;
 };
 
