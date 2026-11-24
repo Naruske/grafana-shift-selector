@@ -1,4 +1,4 @@
-import { dateTime, dateTimeAsMoment } from '@grafana/data';
+import { dateTime, dateTimeAsMoment, TimeRange } from '@grafana/data';
 import { locationService } from '@grafana/runtime';
 import { Option, ShiftData, ShiftI, TExtendedShift, TMappings, TUpdateActiveShiftProps, vars } from './types';
 
@@ -226,4 +226,27 @@ export const updateActiveShift = (props: TUpdateActiveShiftProps) => {
   if (activeShift && activeShift.uuid !== currentSetShift && isShiftActive && !props.isBlockedRender) {
     props.setShiftParams(activeShift, false);
   }
+};
+
+export const getTimeRangeSyncKey = (timeRange?: TimeRange): string | number | undefined => {
+  const rawFrom = timeRange?.raw?.from;
+  if (typeof rawFrom === 'string' && rawFrom.includes('now')) {
+    const rawTo = timeRange?.raw?.to;
+    return typeof rawTo === 'string' ? `${rawFrom}|${rawTo}` : rawFrom;
+  }
+  return timeRange?.from?.unix();
+};
+
+export const getDefaultProductionDate = (timeRange?: TimeRange): number => {
+  const rawFrom = timeRange?.raw?.from;
+  if (typeof rawFrom === 'string' && rawFrom.includes('now')) {
+    if (timeRange?.to) {
+      return timeRange.to.unix() * 1000;
+    }
+    return Date.now();
+  }
+  if (timeRange?.from) {
+    return timeRange.from.unix() * 1000;
+  }
+  return Date.now();
 };

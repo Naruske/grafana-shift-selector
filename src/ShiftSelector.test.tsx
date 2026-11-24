@@ -515,4 +515,38 @@ describe('ShiftSelector Panel (Grafana 13 & React 19)', () => {
       );
     });
   });
+
+  it('defaults DatePicker to today (timeRange.to) instead of yesterday when dashboard opens on Last 24 hours (now-24h to now)', async () => {
+    const yesterday = dateTime('2026-11-23T10:30:00Z');
+    const today = dateTime('2026-11-24T10:30:00Z');
+    const props = {
+      ...createMockProps(),
+      timeRange: {
+        from: yesterday,
+        to: today,
+        raw: { from: 'now-24h', to: 'now' },
+      },
+    };
+
+    const { container, rerender } = render(<ShiftSelector {...props} />);
+    await screen.findByText('Morning Custom');
+
+    const dateInput = container.querySelector('input.production-day-selector') as HTMLInputElement;
+    expect(dateInput.value).toBe('2026-11-24');
+
+    // A 5s refresh tick under the same 'now-24h' to 'now' range must preserve a manually chosen date
+    fireEvent.change(dateInput, { target: { value: '2026-11-20' } });
+    rerender(
+      <ShiftSelector
+        {...props}
+        renderCounter={1}
+        timeRange={{
+          from: dateTime('2026-11-23T10:30:05Z'),
+          to: dateTime('2026-11-24T10:30:05Z'),
+          raw: { from: 'now-24h', to: 'now' },
+        }}
+      />
+    );
+    expect(dateInput.value).toBe('2026-11-20');
+  });
 });

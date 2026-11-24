@@ -5,7 +5,7 @@ import 'react-datepicker/dist/react-datepicker.min.css';
 
 import { PanelProps } from '@grafana/data';
 import { TPropOptions, vars } from './types';
-import { setTypeChangeHandler, shiftSelectHandler } from './utils';
+import { getDefaultProductionDate, getTimeRangeSyncKey, setTypeChangeHandler, shiftSelectHandler } from './utils';
 import { ShiftSelectorWrapper, ShiftSelectorContainer } from './styles/components';
 import { ShiftOptions } from './components/options';
 import { InputWrappers } from './components/inputWrappers';
@@ -134,15 +134,11 @@ const ShiftSelector: React.FC<PanelProps<TPropOptions>> = (props) => {
     };
   }, [props.eventBus, props.options._refreshInterval]);
 
-  const rawFrom = props.timeRange?.raw?.from;
-  const timeRangeFromSyncKey =
-    typeof rawFrom === 'string' && rawFrom.includes('now')
-      ? rawFrom
-      : props.timeRange?.from?.unix();
+  const timeRangeFromSyncKey = getTimeRangeSyncKey(props.timeRange);
 
   useEffect(() => {
-    if (!isAutoSelectShift && props.timeRange?.from && timeRangeFromSyncKey !== undefined) {
-      setProductionDate(props.timeRange.from.unix() * 1000);
+    if (!isAutoSelectShift && timeRangeFromSyncKey !== undefined) {
+      setProductionDate(getDefaultProductionDate(props.timeRange));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAutoSelectShift, setProductionDate, timeRangeFromSyncKey]);

@@ -26,7 +26,15 @@ import {
   TStaticShift,
   vars,
 } from '../types';
-import { dateTimeFormat, getInitGroupUUID, getRelativeDates, startHourIsGreater, transformShiftData, updateActiveShift } from '../utils';
+import {
+  dateTimeFormat,
+  getDefaultProductionDate,
+  getInitGroupUUID,
+  getRelativeDates,
+  startHourIsGreater,
+  transformShiftData,
+  updateActiveShift,
+} from '../utils';
 import { firstValueFrom } from 'rxjs';
 
 type TDataResponse = { data: { results: { shifts_values: { dataframes: DataFrame[] } } } }
@@ -57,7 +65,7 @@ export const useShiftSelectorHook = (props: PanelProps<TPropOptions>) => {
   const [alerts, setAlerts] = useState<TAlert[] | []>([]);
   const [updateType, setUpdateType] = useState<string>(datePartsToSet.both);
   const [closedAlerts, setClosedAlerts] = useState<number[]>([]);
-  const [productionDate, setProductionDate] = useState<number>(timeRange.from.unix() * 1000);
+  const [productionDate, setProductionDate] = useState<number>(() => getDefaultProductionDate(timeRange));
   const [siteUUID, setSiteUUID] = useState<any>();
   const [isStatic, setIsStatic] = useState<boolean>(false);
   const [sqlConfig, setSqlConfig] = useState<TSqlConfig | null>(null);

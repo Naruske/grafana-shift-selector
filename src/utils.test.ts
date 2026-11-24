@@ -1,11 +1,14 @@
+import { dateTime } from '@grafana/data';
 import {
   buttonTypes,
   dateTimeFormat,
   getBreweryUUID,
+  getDefaultProductionDate,
   getHasNextDayShift,
   getInitGroupUUID,
   getRelativeDates,
   getShifts,
+  getTimeRangeSyncKey,
   parseShiftData,
   setTypeChangeHandler,
   shiftSelectHandler,
@@ -193,6 +196,27 @@ describe('utils (Grafana 13 compatibility)', () => {
         relativeFrom: true,
         relativeTo: false,
       });
+    });
+
+    it('defaults productionDate to timeRange.to for relative ranges like Last 24 hours and timeRange.from for absolute ranges', () => {
+      const yesterday = dateTime('2026-11-23T11:30:00Z');
+      const today = dateTime('2026-11-24T11:30:00Z');
+
+      const relativeRange = {
+        from: yesterday,
+        to: today,
+        raw: { from: 'now-24h', to: 'now' },
+      };
+      expect(getDefaultProductionDate(relativeRange)).toBe(today.unix() * 1000);
+      expect(getTimeRangeSyncKey(relativeRange)).toBe('now-24h|now');
+
+      const absoluteRange = {
+        from: yesterday,
+        to: today,
+        raw: { from: yesterday, to: today },
+      };
+      expect(getDefaultProductionDate(absoluteRange)).toBe(yesterday.unix() * 1000);
+      expect(getTimeRangeSyncKey(absoluteRange)).toBe(yesterday.unix());
     });
   });
 });
