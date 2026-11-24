@@ -62,6 +62,7 @@ export const InputWrappers = (props: TPropInputWrapperOptions) => {
         {isShowDayLabel ? <span>{dayLabel || 'Select day'}</span> : <></>}
         <DatePicker
           className="production-day-selector"
+          portalId="grafana-portal-container"
           selected={new Date(productionDate)}
           onChange={(date: Date | null) => {
             if (date) {

@@ -351,37 +351,33 @@ ORDER by ??, ??
   }, [siteUUID, sqlConfig, isStatic, resetAlert, setAlertHandler, setShiftValues, processShifts, templateSrv]);
 
   useEffect(() => {
-    const dateRange = {
-      from: timeRange.from.format(dateTimeFormat),
-      to: timeRange.to.format(dateTimeFormat),
+    if (!customTimeRange?.from || !customTimeRange?.to) {
+      return;
+    }
+
+    const { from, to, uuid } = customTimeRange;
+    const fromCheck = typeof from === 'string' ? timeRange.from.unix() * 1000 : from;
+    const toCheck = typeof to === 'string' ? timeRange.to.unix() * 1000 : to;
+    const isSwapDates = fromCheck > toCheck;
+    let { refresh: _refresh } = getRefreshRate();
+
+    if (refreshRef.current && !_refresh) {
+      _refresh = refreshRef.current;
+    } else if (!refreshRef.current && _refresh) {
+      refreshRef.current = _refresh;
+    }
+
+    const query = {
+      from: isSwapDates ? to : from,
+      to: isSwapDates ? from : to,
+      [vars.queryShiftsGroup]: autoSelectShiftGroup,
+      [vars.queryShiftsOptions]: uuid,
+      refresh: _refresh,
     };
 
-    setInitDateRange(() => dateRange);
-
-    if (customTimeRange?.from && customTimeRange?.to) {
-      const { from, to, uuid } = customTimeRange || {};
-      const fromCheck = typeof from === 'string' ? timeRange.from.unix() * 1000 : from;
-      const toCheck = typeof to === 'string' ? timeRange.to.unix() * 1000 : to;
-      const isSwapDates = fromCheck > toCheck;
-      let { refresh: _refresh } = getRefreshRate()
-
-      if (refreshRef.current && !_refresh) {
-        _refresh = refreshRef.current
-      } else if (!refreshRef.current && _refresh) {
-        refreshRef.current = _refresh
-      }
-
-      const query = {
-        from: isSwapDates ? to : from,
-        to: isSwapDates ? from : to,
-        [vars.queryShiftsGroup]: autoSelectShiftGroup,
-        [vars.queryShiftsOptions]: uuid,
-        refresh: _refresh,
-      };
-
-      locationSrv.partial(query, false);
-    }
-  }, [locationSrv, customTimeRange, timeRange.to, timeRange.from, getRefreshRate, setInitDateRange, autoSelectShiftGroup, isAutoSelectShift]);
+    setCustomTimeRange(null);
+    locationSrv.partial(query, false);
+  }, [locationSrv, customTimeRange, timeRange.to, timeRange.from, getRefreshRate, autoSelectShiftGroup]);
 
   useEffect(() => {
     if (width < 400) {

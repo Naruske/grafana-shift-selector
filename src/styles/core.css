@@ -28,6 +28,7 @@
 
 .show-panel-datepicker {
   contain: unset !important;
+  overflow: visible !important;
 }
 
 .production-day-selector {
@@ -39,7 +40,7 @@
 }
 
 .react-datepicker-popper {
-  z-index: 999 !important;
+  z-index: 9999 !important;
 }
 
 .react-datepicker-popper[data-placement^=bottom] .react-datepicker__triangle::before {

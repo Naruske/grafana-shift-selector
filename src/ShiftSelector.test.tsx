@@ -368,4 +368,80 @@ describe('ShiftSelector Panel (Grafana 13 & React 19)', () => {
     expect(container.querySelector('[data-count]')).toBeInTheDocument();
     expect(screen.queryByText('Select day')).not.toBeInTheDocument();
   });
+
+  it('does not re-trigger locationService.partial in a loop when SceneTimeRange or 5s refresh emits new timeRange instances', async () => {
+    const props = createMockProps();
+    const { rerender } = render(<ShiftSelector {...props} />);
+
+    const morningButton = await screen.findByText('Morning Custom');
+    fireEvent.click(morningButton);
+
+    await waitFor(() => {
+      expect(partialSpy).toHaveBeenCalledTimes(1);
+    });
+
+    // Simulate SceneTimeRange updating props.timeRange with fresh DateTime instances and 5s refresh ticks
+    for (let tick = 1; tick <= 3; tick++) {
+      const refreshedFrom = dateTime('2025-05-15T06:00:00Z');
+      const refreshedTo = dateTime('2025-05-15T14:00:00Z');
+      const nextProps = {
+        ...createMockProps(),
+        renderCounter: tick,
+        timeRange: {
+          from: refreshedFrom,
+          to: refreshedTo,
+          raw: { from: '2025-05-15T06:00:00.000Z', to: '2025-05-15T14:00:00.000Z' },
+        },
+      };
+      rerender(<ShiftSelector {...nextProps} />);
+    }
+
+    expect(partialSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('preserves a user-selected date in DatePicker across 5s dashboard refresh re-renders and applies that date on shift click', async () => {
+    const props = createMockProps();
+    const { container, rerender } = render(<ShiftSelector {...props} />);
+
+    await screen.findByText('Morning Custom');
+
+    const dateInput = container.querySelector('input.production-day-selector') as HTMLInputElement;
+    expect(dateInput).toBeInTheDocument();
+    expect(dateInput.value).toBe('2025-05-15');
+
+    // Change the date in the DatePicker to 2025-06-24
+    fireEvent.change(dateInput, { target: { value: '2025-06-24' } });
+    expect(dateInput.value).toBe('2025-06-24');
+
+    // Simulate a 5s auto-refresh re-render where props and timeRange are freshly instantiated at the old date
+    const refreshedProps = {
+      ...createMockProps(),
+      renderCounter: 2,
+      timeRange: {
+        from: dateTime('2025-05-15T06:00:00Z'),
+        to: dateTime('2025-05-15T14:00:00Z'),
+        raw: { from: '2025-05-15T06:00:00.000Z', to: '2025-05-15T14:00:00.000Z' },
+      },
+    };
+    rerender(<ShiftSelector {...refreshedProps} />);
+
+    // The user's chosen date must not be reset back to 2025-05-15 by the refresh tick
+    expect(dateInput.value).toBe('2025-06-24');
+
+    // Clicking a shift button must use the newly selected date (2025-06-24)
+    const morningButton = await screen.findByText('Morning Custom');
+    fireEvent.click(morningButton);
+
+    await waitFor(() => {
+      expect(partialSpy).toHaveBeenCalledTimes(1);
+      expect(partialSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          from: Date.UTC(2025, 5, 24, 6, 0, 0),
+          to: Date.UTC(2025, 5, 24, 14, 0, 0),
+          [vars.queryShiftsOptions]: 'shift_uuid_1',
+        }),
+        false
+      );
+    });
+  });
 });

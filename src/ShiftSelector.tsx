@@ -70,11 +70,12 @@ const ShiftSelector: React.FC<PanelProps<TPropOptions>> = (props) => {
         '#' + shiftSelectorRef.current.id
       );
 
-      shiftSelectorPluginPanel.forEach(
-        (panel) =>
-          panel?.parentNode?.childElementCount &&
-          (panel?.parentNode as HTMLDivElement)?.classList.add('show-panel-datepicker')
-      );
+      shiftSelectorPluginPanel.forEach((panel) => {
+        if (panel?.parentNode?.childElementCount) {
+          (panel.parentNode as HTMLElement).classList.add('show-panel-datepicker');
+          (panel.parentNode.parentElement as HTMLElement | null)?.classList.add('show-panel-datepicker');
+        }
+      });
 
       const editorPanelsSize = window.document.querySelectorAll('[data-testid="options-category"]').length;
 
@@ -133,11 +134,18 @@ const ShiftSelector: React.FC<PanelProps<TPropOptions>> = (props) => {
     };
   }, [props.eventBus, props.options._refreshInterval]);
 
+  const rawFrom = props.timeRange?.raw?.from;
+  const timeRangeFromSyncKey =
+    typeof rawFrom === 'string' && rawFrom.includes('now')
+      ? rawFrom
+      : props.timeRange?.from?.unix();
+
   useEffect(() => {
-    if (!isAutoSelectShift && props.timeRange.from) {
+    if (!isAutoSelectShift && props.timeRange?.from && timeRangeFromSyncKey !== undefined) {
       setProductionDate(props.timeRange.from.unix() * 1000);
     }
-  }, [isAutoSelectShift, setProductionDate, props]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAutoSelectShift, setProductionDate, timeRangeFromSyncKey]);
 
   if (isBlockedRender) {
     return <Alerts alerts={alerts} resetAlert={resetAlert} setClosedAlerts={setClosedAlerts} />;
