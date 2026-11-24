@@ -166,11 +166,13 @@ export const useShiftSelectorHook = (props: PanelProps<TPropOptions>) => {
   );
   const setManualShiftParams = useCallback(
     (shift: TExtendedShift, productionDate: number) => {
+      const manualDate = new Date(productionDate);
+      manualDate.setHours(23, 0, 0, 0);
       const { startDate, endDate } =
         transformShiftData(
           (shift as unknown) as ShiftI & { index: number },
           startHourIsGreater(shift.start, shift.end),
-          productionDate
+          +manualDate
         ) || {};
 
       let updateTimeRange = {
@@ -367,9 +369,11 @@ ORDER by ??, ??
       refreshRef.current = _refresh;
     }
 
+    const rawFrom = isSwapDates ? to : from;
+    const rawTo = isSwapDates ? from : to;
     const query = {
-      from: isSwapDates ? to : from,
-      to: isSwapDates ? from : to,
+      from: typeof rawFrom === 'number' ? new Date(rawFrom).toISOString() : rawFrom,
+      to: typeof rawTo === 'number' ? new Date(rawTo).toISOString() : rawTo,
       [vars.queryShiftsGroup]: autoSelectShiftGroup,
       [vars.queryShiftsOptions]: uuid,
       refresh: _refresh,

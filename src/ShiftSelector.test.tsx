@@ -166,8 +166,8 @@ describe('ShiftSelector Panel (Grafana 13 & React 19)', () => {
     await waitFor(() => {
       expect(partialSpy).toHaveBeenCalledWith(
         expect.objectContaining({
-          from: Date.UTC(2025, 4, 15, 6, 0, 0),
-          to: Date.UTC(2025, 4, 15, 14, 0, 0),
+          from: '2025-05-15T06:00:00.000Z',
+          to: '2025-05-15T14:00:00.000Z',
           [vars.queryShiftsOptions]: 'shift_uuid_1',
         }),
         false
@@ -193,8 +193,8 @@ describe('ShiftSelector Panel (Grafana 13 & React 19)', () => {
     await waitFor(() => {
       expect(partialSpy).toHaveBeenCalledWith(
         expect.objectContaining({
-          from: Date.UTC(2025, 4, 15, 6, 0, 0),
-          to: existingEndMs,
+          from: '2025-05-15T06:00:00.000Z',
+          to: '2025-05-15T22:00:00.000Z',
           [vars.queryShiftsOptions]: undefined,
         }),
         false
@@ -436,8 +436,79 @@ describe('ShiftSelector Panel (Grafana 13 & React 19)', () => {
       expect(partialSpy).toHaveBeenCalledTimes(1);
       expect(partialSpy).toHaveBeenCalledWith(
         expect.objectContaining({
-          from: Date.UTC(2025, 5, 24, 6, 0, 0),
-          to: Date.UTC(2025, 5, 24, 14, 0, 0),
+          from: '2025-06-24T06:00:00.000Z',
+          to: '2025-06-24T14:00:00.000Z',
+          [vars.queryShiftsOptions]: 'shift_uuid_1',
+        }),
+        false
+      );
+    });
+  });
+
+  it('does not step the production date backwards when switching from a morning shift to an overnight shift', async () => {
+    const props = createMockProps({
+      var_query_map_static: JSON.stringify({
+        static: {
+          shifts: [
+            {
+              group: 'Blikkenlijn',
+              group_uuid: 'uuid_2',
+              uuid: 'shift_uuid_2',
+              label: 'Ochtend',
+              startTime: '05:00:00',
+              endTime: '17:00:00',
+              order: 1,
+            },
+            {
+              group: 'Blikkenlijn',
+              group_uuid: 'uuid_2',
+              uuid: 'shift_uuid_1',
+              label: 'Avond',
+              startTime: '17:00:00',
+              endTime: '05:00:00',
+              order: 2,
+            },
+          ],
+        },
+      }),
+    });
+    const { rerender } = render(<ShiftSelector {...props} />);
+
+    // Click Ochtend shift (05:00 - 17:00) on 2025-05-15 (where startHour 5 matches Avond endHour 5)
+    const morningButton = await screen.findByText('Ochtend');
+    fireEvent.click(morningButton);
+
+    await waitFor(() => {
+      expect(partialSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          from: '2025-05-15T05:00:00.000Z',
+          to: '2025-05-15T17:00:00.000Z',
+          [vars.queryShiftsOptions]: 'shift_uuid_2',
+        }),
+        false
+      );
+    });
+
+    // Simulate Grafana updating props.timeRange.from to 2025-05-15T05:00:00.000Z (hour = 5)
+    const afterMorningProps = {
+      ...props,
+      timeRange: {
+        from: dateTime('2025-05-15T05:00:00Z'),
+        to: dateTime('2025-05-15T17:00:00Z'),
+        raw: { from: '2025-05-15T05:00:00.000Z', to: '2025-05-15T17:00:00.000Z' },
+      },
+    };
+    rerender(<ShiftSelector {...afterMorningProps} />);
+
+    // Now click Avond shift (17:00 - 05:00) on the same production day 2025-05-15
+    const eveningButton = await screen.findByText('Avond');
+    fireEvent.click(eveningButton);
+
+    await waitFor(() => {
+      expect(partialSpy).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          from: '2025-05-15T17:00:00.000Z',
+          to: '2025-05-16T05:00:00.000Z',
           [vars.queryShiftsOptions]: 'shift_uuid_1',
         }),
         false
